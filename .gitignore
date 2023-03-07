@@ -33,3 +33,7 @@ local.properties
 test-output/
 reports/
 result/
+
+
+# create virtual env locally
+virtualenvironment/

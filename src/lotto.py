@@ -1,74 +1,62 @@
-import os
-from multiprocessing import context
-
+import csv
+import re
+import sys
 import time
+import yaml
+
 from selenium import webdriver
-from selenium.common.exceptions import WebDriverException
+from selenium.common import ElementNotVisibleException, ElementNotSelectableException
+from selenium.webdriver import ActionChains
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
 
-proj_path = os.getcwd()[:os.getcwd().rfind('lottoproject')]+'lottoproject'
-os.chdir(proj_path)
-
-def lotto_go(context):
+from selenium.webdriver.support import expected_conditions as EC
 
 # initiate browser
-    chrome_path = proj_path+'/resources/chromedriver.exe'
-    # print(chrome_path)
-    options = webdriver.ChromeOptions()
-    # options.add_argument('headless')
-    # options.add_argument('disable-gpu')
-    options.add_argument('start-maximized')
-    prefs = {"profile.default_content_settings.popups": 0,
-             "download.default_directory": r""+proj_path+"/result/", # IMPORTANT - ENDING SLASH V IMPORTANT
-             "directory_upgrade": True}
-    options.add_experimental_option("prefs", prefs)
+# with open(proj_path+'\\resources\\config.yml', "r") as f:
+config = yaml.safe_load(open(sys.path[1] + '\\resources\\config.yml', "r"))
+config_in_use = config['DailyMillion']
+date_in_use = '07 Mar 2023'
 
-    context.browser = webdriver.Chrome(chrome_path, chrome_options=options)
-    context.browser.implicitly_wait(30)
+options = webdriver.ChromeOptions()
+# options.add_argument('headless')
+# options.add_argument('disable-gpu')
+options.add_argument('start-maximized')
 
-# login
-    context.browser.get('https://www.lottery.ie/account/login')
+driver = webdriver.Chrome(service=Service(config['driver_path']), options=options)
 
-    context.browser.find_element_by_css_selector('input[name="username"]').click()
-    context.browser.find_element_by_css_selector('input[name="username"]').clear()
-    context.browser.find_element_by_css_selector('input[name="username"]').send_keys('luckyvasul@gmail.com')
+driver.get(config_in_use['url'])
 
-    context.browser.find_element_by_css_selector('input[name="password"]').click()
-    context.browser.find_element_by_css_selector('input[name="password"]').clear()
-    context.browser.find_element_by_css_selector('input[name="password"]').send_keys('Greeg8989')
+ignore_list = [ElementNotVisibleException, ElementNotSelectableException]
+wait = WebDriverWait(driver, timeout=10, poll_frequency=1, ignored_exceptions=ignore_list)
+# wait = WebDriverWait(driver, timeout=10, poll_frequency=1)
+datePicker = wait.until(
+    EC.visibility_of_element_located((By.CLASS_NAME, 'rs-picker-toggle-placeholder')))
 
-    context.browser.find_element_by_css_selector('#loginSubmitButton').submit()
+ActionChains(driver).move_to_element(datePicker).click(datePicker).perform()
 
-# go to lotto play online
-    context.browser.get('https://www.lottery.ie/games/lotto')
+selectDate = wait.until(
+    EC.visibility_of_element_located((By.CSS_SELECTOR, '[title^="'+date_in_use+'"]')))
 
-# lotto quick pick 2 lines
-    context.browser.find_element_by_css_selector('#playSlip0line1 > ul > li[class="info-qp"]').click()
-    time.sleep(1)
-    context.browser.find_element_by_css_selector('#playSlip0line2 > ul > li[class="info-qp"]').click()
-    time.sleep(1)
+ActionChains(driver).move_to_element(selectDate).click(selectDate).perform()
+ActionChains(driver).move_to_element(selectDate).click(selectDate).perform()
 
+driver.find_element(By.CSS_SELECTOR, 'button.rs-picker-toolbar-right-btn-ok').click()
 
+time.sleep(2)
 
-# check Add lotto plus is also selected
-    # be default is selected, so check the ticket price value, should be 5 euros for 2 lines selected
-    totalAmount = context.browser.find_element_by_css_selector('#totalAmount')
-    assert totalAmount.text == '€5.00'
+for each_card in driver.find_elements(By.CSS_SELECTOR, config_in_use['results_card_selector']):
+    src_attribute = each_card.find_element(By.TAG_NAME, 'img').get_attribute("src")
 
-    playNow_button = context.browser.find_element_by_css_selector('#playNow').click()
+    lottery_type = re.findall(r'results/(.+).svg', src_attribute)[0]
 
-# check totalAmount displayed for selected lines == Amount to pay
-    totalPrice = context.browser.find_element_by_css_selector('#totalAmount')
-    assert totalAmount.text == totalPrice.text
+    lottery_ball_row = each_card.find_elements(By.CSS_SELECTOR, config_in_use['lottery_ball_row_selector'])
 
-# check enough balance in accunt before buying ticket
-    wallet = context.browser.find_element_by_css_selector('li.info-balance span.wallet')
-    print(wallet.text)
-# buy ticket
-#     context.browser.find_element_by_css_selector('button[data-test-id="buy_ticket_button"]').click()
+    lottery_balls = [job.text for job in lottery_ball_row]
 
+    filename = sys.path[1] + '\\prepared_assets\\'+lottery_type+'.csv'
 
-
-    # context.browser.quit()
-
-if __name__ == '__main__':
-    lotto_go(context)
+    csvwriter = csv.writer(open(filename, 'a', newline=""))
+    csvwriter.writerow(lottery_balls)
+    csvwriter

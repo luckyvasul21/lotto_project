@@ -1,0 +1,21 @@
+driver_path: 'C:/Testing/drivers/chromedriver.exe'
+
+EuroMillions:
+  results_card_selector: '[data-testid="result-hub-card"]:has([data-testid="euroMillion-ball"])'
+  url: 'https://www.lottery.ie/results/euromillions/history'
+  lottery_ball_row_selector: '[data-testid="euroMillion-ball"]'
+
+Lotto:
+  results_card_selector: '[data-testid="result-hub-card"]:has([data-testid="lotto-ball"])'
+  url: 'https://www.lottery.ie/results/lotto/history'
+  lottery_ball_row_selector: '[data-testid="lotto-ball"]'
+
+Lotto54321:
+  results_card_selector: '[data-testid="result-hub-card"]:has([data-testid="lotto-ball"])'
+  url: 'https://www.lottery.ie/results/lotto-54321/history'
+  lottery_ball_row_selector: '[data-testid="lotto-ball"]'
+
+DailyMillion:
+  results_card_selector: '[data-testid="result-hub-card"]:has([data-testid="dailyMillion-ball"])'
+  url: 'https://www.lottery.ie/results/daily-million/history'
+  lottery_ball_row_selector: '[data-testid="dailyMillion-ball"]'
